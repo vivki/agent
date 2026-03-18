@@ -46,6 +46,7 @@ func (efo *ExternalFileOperator) DownloadExternalFile(ctx context.Context, fileA
 	fileName := fileAction.File.GetFileMeta().GetName()
 
 	slog.InfoContext(ctx, "Downloading external file", "location", location)
+	slog.InfoContext(ctx, "vicki is here")
 
 	var contentToWrite []byte
 	var downloadErr, updateError error
