@@ -1,0 +1,39 @@
+type: certificate
+scope_name: otelcol/nginxplusreceiver
+
+status:
+  class: receiver
+  stability:
+    beta: [metrics]
+  distributions: [contrib]
+
+resource_attributes:
+  instance.id:
+    description: The nginx instance id.
+    type: string
+    enabled: true
+
+attributes:
+  subject.common_name:
+    description: "The Common Name of the certificate."
+    type: string
+  public_key_algorithm:
+    description: "The public key algorithm."
+    type: string
+  file_path:
+    description: "The full file path of the certificate."
+    type: string
+
+metrics:
+  nginx.certificate.time_to_expiration:
+    enabled: true
+    description: "The time (in seconds) until an SSL/TLS certificate expires"
+    gauge:
+      value_type: int
+    unit: "seconds"
+    attributes:
+      - subject.common_name
+      - public_key_algorithm
+      - filepath
+
+
