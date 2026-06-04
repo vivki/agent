@@ -39,8 +39,8 @@ type CertificateScraper struct {
 	mb           *metadata.MetricsBuilder
 	rb           *metadata.ResourceBuilder
 	logger       *zap.Logger
-	settings     receiver.Settings
 	agentConfig  *config.Config
+	settings     receiver.Settings
 }
 
 func newCertificateScraper(

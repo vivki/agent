@@ -40,6 +40,7 @@ func (m *mockConfigParser) Parse(_ context.Context, _ *mpi.Instance) (*model.Ngi
 func newTestScraper(t *testing.T, cfg *Config) *CertificateScraper {
 	t.Helper()
 	settings := receivertest.NewNopSettings(component.MustNewType("certificate"))
+
 	return newCertificateScraper(settings, cfg)
 }
 
@@ -98,7 +99,7 @@ func TestScrape_FutureExpiry(t *testing.T) {
 
 	dp := ms.At(0).Gauge().DataPoints().At(0)
 	ttl := dp.IntValue()
-	assert.Greater(t, ttl, int64(0), "TTL should be positive for future expiry")
+	assert.Positive(t, ttl, "TTL should be positive for future expiry")
 
 	// Verify attributes
 	filePath, ok := dp.Attributes().Get("file_path")
@@ -159,7 +160,7 @@ func TestScrape_ExpiredCert(t *testing.T) {
 
 	require.Equal(t, 1, metrics.ResourceMetrics().Len())
 	dp := metrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0)
-	assert.Less(t, dp.IntValue(), int64(0), "TTL should be negative for expired cert")
+	assert.Negative(t, dp.IntValue(), "TTL should be negative for expired cert")
 }
 
 func TestScrape_NonCertFileSkipped(t *testing.T) {
@@ -288,7 +289,7 @@ func TestScrape_InstanceNotFound(t *testing.T) {
 	}
 	scraper := newTestScraper(t, cfg)
 	scraper.instanceProv = &mockInstanceProvider{
-		instances: map[string]*mpi.Instance{}, // empty
+		instances: make(map[string]*mpi.Instance), // empty
 	}
 	scraper.parser = &mockConfigParser{}
 

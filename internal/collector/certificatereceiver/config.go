@@ -16,12 +16,10 @@ import (
 const defaultCollectInterval = 15 * time.Second
 
 type Config struct {
+	AgentConfig                    *config.Config                `mapstructure:"-"`
 	InstanceID                     string                        `mapstructure:"instance_id"`
 	MetricsBuilderConfig           metadata.MetricsBuilderConfig `mapstructure:",squash"`
 	scraperhelper.ControllerConfig `mapstructure:",squash"`
-	// AgentConfig is optionally injected at construction time. When nil, Start()
-	// calls config.ResolveConfig() to resolve it from the environment.
-	AgentConfig *config.Config `mapstructure:"-"`
 }
 
 //nolint:ireturn // must return default controller interface

@@ -31,6 +31,8 @@ metrics:
   nginx.certificate.time_to_expiration:
     enabled: true
     description: "The time (in seconds) until an SSL/TLS certificate expires"
+    stability:
+      level: development
     gauge:
       value_type: int
     unit: "s"

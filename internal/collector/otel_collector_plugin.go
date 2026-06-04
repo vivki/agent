@@ -22,7 +22,7 @@ import (
 	pkgConfig "github.com/nginx/agent/v3/pkg/config"
 	"go.opentelemetry.io/collector/confmap"
 
-	v1 "github.com/nginx/agent/v3/api/grpc/mpi/v1"
+	"github.com/nginx/agent/v3/api/grpc/mpi/v1"
 	"github.com/nginx/agent/v3/internal/backoff"
 	"github.com/nginx/agent/v3/internal/bus"
 	"github.com/nginx/agent/v3/internal/collector/types"
@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	maxTimeToWaitForShutdown  = 30 * time.Second
-	defaultCollectionInterval = 1 * time.Minute
-	filePermission            = 0o600
+	maxTimeToWaitForShutdown      = 30 * time.Second
+	defaultCollectionInterval     = 1 * time.Minute
+	defaultCertCollectionInterval = 15 * time.Second
+	filePermission                = 0o600
 	// To conform to the rfc3164 spec the timestamp in the logs need to be formatted correctly.
 	// Here are some examples of what the timestamp conversions look like.
 	// Notice how if the day begins with a zero that the zero is replaced with an empty space.
@@ -776,7 +777,7 @@ func (oc *Collector) updateCertificateReceivers(nginxConfigContext *model.NginxC
 		oc.config.Collector.Receivers.CertificateReceivers,
 		config.CertificateReceiver{
 			InstanceID:         nginxConfigContext.InstanceID,
-			CollectionInterval: 15 * time.Second,
+			CollectionInterval: defaultCertCollectionInterval,
 		},
 	)
 
