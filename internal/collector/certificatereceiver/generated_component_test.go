@@ -6,6 +6,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nginx/agent/v3/internal/config"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -47,6 +48,14 @@ func TestComponentLifecycle(t *testing.T) {
 	sub, err := cm.Sub("tests::config")
 	require.NoError(t, err)
 	require.NoError(t, sub.Unmarshal(&cfg))
+
+	// Inject a minimal AgentConfig so Start() does not call ResolveConfig().
+	cfg.(*Config).AgentConfig = &config.Config{
+		AllowedDirectories: []string{"/etc/nginx"},
+		DataPlaneConfig: &config.DataPlaneConfig{
+			Nginx: &config.NginxDataPlaneConfig{},
+		},
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name+"-shutdown", func(t *testing.T) {

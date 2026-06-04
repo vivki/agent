@@ -22,7 +22,7 @@ import (
 	pkgConfig "github.com/nginx/agent/v3/pkg/config"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/nginx/agent/v3/api/grpc/mpi/v1"
+	v1 "github.com/nginx/agent/v3/api/grpc/mpi/v1"
 	"github.com/nginx/agent/v3/internal/backoff"
 	"github.com/nginx/agent/v3/internal/bus"
 	"github.com/nginx/agent/v3/internal/collector/types"
@@ -541,6 +541,10 @@ func (oc *Collector) checkForNewReceivers(ctx context.Context, nginxConfigContex
 		slog.DebugContext(ctx, "NAP logs feature disabled", "enabled_features", oc.config.Features)
 	}
 
+	if oc.config.IsFeatureEnabled(pkgConfig.FeatureCertificates) {
+		reloadCollector = reloadCollector || oc.updateCertificateReceivers(nginxConfigContext)
+	}
+
 	return reloadCollector
 }
 
@@ -759,6 +763,24 @@ func (oc *Collector) doesTcplogReceiverAlreadyExist(listenAddress string) bool {
 	}
 
 	return false
+}
+
+func (oc *Collector) updateCertificateReceivers(nginxConfigContext *model.NginxConfigContext) bool {
+	for _, certReceiver := range oc.config.Collector.Receivers.CertificateReceivers {
+		if certReceiver.InstanceID == nginxConfigContext.InstanceID {
+			return false // Already exists
+		}
+	}
+
+	oc.config.Collector.Receivers.CertificateReceivers = append(
+		oc.config.Collector.Receivers.CertificateReceivers,
+		config.CertificateReceiver{
+			InstanceID:         nginxConfigContext.InstanceID,
+			CollectionInterval: 15 * time.Second,
+		},
+	)
+
+	return true
 }
 
 func (oc *Collector) updateResourceAttributes(

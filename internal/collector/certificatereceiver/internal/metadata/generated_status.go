@@ -8,7 +8,7 @@ import (
 
 var (
 	Type      = component.MustNewType("certificate")
-	ScopeName = "otelcol/nginxplusreceiver"
+	ScopeName = "github.com/nginx/agent/v3/internal/collector/certificatereceiver"
 )
 
 const (

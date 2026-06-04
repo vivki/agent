@@ -1,5 +1,5 @@
 type: certificate
-scope_name: otelcol/nginxplusreceiver
+scope_name: github.com/nginx/agent/v3/internal/collector/certificatereceiver
 
 status:
   class: receiver
@@ -14,14 +14,17 @@ resource_attributes:
     enabled: true
 
 attributes:
-  subject.common_name:
-    description: "The Common Name of the certificate."
+  file_path:
+    description: "The full file path of the certificate."
     type: string
   public_key_algorithm:
     description: "The public key algorithm."
     type: string
-  file_path:
-    description: "The full file path of the certificate."
+  serial_number:
+    description: "The serial number of the certificate."
+    type: string
+  subject.common_name:
+    description: "The Common Name of the certificate."
     type: string
 
 metrics:
@@ -30,10 +33,10 @@ metrics:
     description: "The time (in seconds) until an SSL/TLS certificate expires"
     gauge:
       value_type: int
-    unit: "seconds"
+    unit: "s"
     attributes:
-      - subject.common_name
+      - file_path
       - public_key_algorithm
-      - filepath
-
+      - serial_number
+      - subject.common_name
 

@@ -18,14 +18,16 @@ The time (in seconds) until an SSL/TLS certificate expires
 
 | Unit | Metric Type | Value Type |
 | ---- | ----------- | ---------- |
-| seconds | Gauge | Int |
+| s | Gauge | Int |
 
 #### Attributes
 
 | Name | Description | Values |
 | ---- | ----------- | ------ |
-| common.name | The Common Name of the certificate. | Any Str |
-| file.path | The full file path of the certificate. | Any Str |
+| file_path | The full file path of the certificate. | Any Str |
+| public_key_algorithm | The public key algorithm. | Any Str |
+| serial_number | The serial number of the certificate. | Any Str |
+| subject.common_name | The Common Name of the certificate. | Any Str |
 
 ## Resource Attributes
 

@@ -8,16 +8,20 @@ import (
 	"time"
 
 	"github.com/nginx/agent/v3/internal/collector/certificatereceiver/internal/metadata"
+	"github.com/nginx/agent/v3/internal/config"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/scraper/scraperhelper"
 )
 
-const defaultCollectInterval = 10 * time.Second
+const defaultCollectInterval = 15 * time.Second
 
 type Config struct {
 	InstanceID                     string                        `mapstructure:"instance_id"`
 	MetricsBuilderConfig           metadata.MetricsBuilderConfig `mapstructure:",squash"`
 	scraperhelper.ControllerConfig `mapstructure:",squash"`
+	// AgentConfig is optionally injected at construction time. When nil, Start()
+	// calls config.ResolveConfig() to resolve it from the environment.
+	AgentConfig *config.Config `mapstructure:"-"`
 }
 
 //nolint:ireturn // must return default controller interface

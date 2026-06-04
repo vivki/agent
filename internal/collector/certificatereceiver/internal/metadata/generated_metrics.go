@@ -36,12 +36,12 @@ type metricNginxCertificateTimeToExpiration struct {
 func (m *metricNginxCertificateTimeToExpiration) init() {
 	m.data.SetName("nginx.certificate.time_to_expiration")
 	m.data.SetDescription("The time (in seconds) until an SSL/TLS certificate expires")
-	m.data.SetUnit("seconds")
+	m.data.SetUnit("s")
 	m.data.SetEmptyGauge()
 	m.data.Gauge().DataPoints().EnsureCapacity(m.capacity)
 }
 
-func (m *metricNginxCertificateTimeToExpiration) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64, commonNameAttributeValue string, filePathAttributeValue string) {
+func (m *metricNginxCertificateTimeToExpiration) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64, filePathAttributeValue string, publicKeyAlgorithmAttributeValue string, serialNumberAttributeValue string, subjectCommonNameAttributeValue string) {
 	if !m.config.Enabled {
 		return
 	}
@@ -49,8 +49,10 @@ func (m *metricNginxCertificateTimeToExpiration) recordDataPoint(start pcommon.T
 	dp.SetStartTimestamp(start)
 	dp.SetTimestamp(ts)
 	dp.SetIntValue(val)
-	dp.Attributes().PutStr("common.name", commonNameAttributeValue)
-	dp.Attributes().PutStr("file.path", filePathAttributeValue)
+	dp.Attributes().PutStr("file_path", filePathAttributeValue)
+	dp.Attributes().PutStr("public_key_algorithm", publicKeyAlgorithmAttributeValue)
+	dp.Attributes().PutStr("serial_number", serialNumberAttributeValue)
+	dp.Attributes().PutStr("subject.common_name", subjectCommonNameAttributeValue)
 }
 
 // updateCapacity saves max length of data point slices that will be used for the slice capacity.
@@ -226,8 +228,8 @@ func (mb *MetricsBuilder) Emit(options ...ResourceMetricsOption) pmetric.Metrics
 }
 
 // RecordNginxCertificateTimeToExpirationDataPoint adds a data point to nginx.certificate.time_to_expiration metric.
-func (mb *MetricsBuilder) RecordNginxCertificateTimeToExpirationDataPoint(ts pcommon.Timestamp, val int64, commonNameAttributeValue string, filePathAttributeValue string) {
-	mb.metricNginxCertificateTimeToExpiration.recordDataPoint(mb.startTime, ts, val, commonNameAttributeValue, filePathAttributeValue)
+func (mb *MetricsBuilder) RecordNginxCertificateTimeToExpirationDataPoint(ts pcommon.Timestamp, val int64, filePathAttributeValue string, publicKeyAlgorithmAttributeValue string, serialNumberAttributeValue string, subjectCommonNameAttributeValue string) {
+	mb.metricNginxCertificateTimeToExpiration.recordDataPoint(mb.startTime, ts, val, filePathAttributeValue, publicKeyAlgorithmAttributeValue, serialNumberAttributeValue, subjectCommonNameAttributeValue)
 }
 
 // Reset resets metrics builder to its initial state. It should be used when external metrics source is restarted,

@@ -70,7 +70,7 @@ func TestMetricsBuilder(t *testing.T) {
 
 			defaultMetricsCount++
 			allMetricsCount++
-			mb.RecordNginxCertificateTimeToExpirationDataPoint(ts, 1, "common.name-val", "file.path-val")
+			mb.RecordNginxCertificateTimeToExpirationDataPoint(ts, 1, "file.path-val", "public.key.algorithm-val", "serial.number-val", "subject.common.name-val")
 
 			rb := mb.NewResourceBuilder()
 			rb.SetInstanceID("instance.id-val")
@@ -102,18 +102,24 @@ func TestMetricsBuilder(t *testing.T) {
 					assert.Equal(t, pmetric.MetricTypeGauge, ms.At(i).Type())
 					assert.Equal(t, 1, ms.At(i).Gauge().DataPoints().Len())
 					assert.Equal(t, "The time (in seconds) until an SSL/TLS certificate expires", ms.At(i).Description())
-					assert.Equal(t, "seconds", ms.At(i).Unit())
+					assert.Equal(t, "s", ms.At(i).Unit())
 					dp := ms.At(i).Gauge().DataPoints().At(0)
 					assert.Equal(t, start, dp.StartTimestamp())
 					assert.Equal(t, ts, dp.Timestamp())
 					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
 					assert.Equal(t, int64(1), dp.IntValue())
-					attrVal, ok := dp.Attributes().Get("common.name")
-					assert.True(t, ok)
-					assert.Equal(t, "common.name-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("file.path")
+					attrVal, ok := dp.Attributes().Get("file_path")
 					assert.True(t, ok)
 					assert.Equal(t, "file.path-val", attrVal.Str())
+					attrVal, ok = dp.Attributes().Get("public_key_algorithm")
+					assert.True(t, ok)
+					assert.Equal(t, "public.key.algorithm-val", attrVal.Str())
+					attrVal, ok = dp.Attributes().Get("serial_number")
+					assert.True(t, ok)
+					assert.Equal(t, "serial.number-val", attrVal.Str())
+					attrVal, ok = dp.Attributes().Get("subject.common_name")
+					assert.True(t, ok)
+					assert.Equal(t, "subject.common.name-val", attrVal.Str())
 				}
 			}
 		})

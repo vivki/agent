@@ -10,8 +10,7 @@ import (
 
 	mpi "github.com/nginx/agent/v3/api/grpc/mpi/v1"
 	"github.com/nginx/agent/v3/internal/collector/certificatereceiver/internal/metadata"
-	dconfig "github.com/nginx/agent/v3/internal/datasource/config"
-	"github.com/nginx/agent/v3/internal/nginx"
+	"github.com/nginx/agent/v3/internal/model"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -19,16 +18,29 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/nginx/agent/v3/internal/config"
+	dconfig "github.com/nginx/agent/v3/internal/datasource/config"
+	"github.com/nginx/agent/v3/internal/nginx"
 )
 
+// instanceProvider returns an NGINX instance by ID.
+type instanceProvider interface {
+	Instance(instanceID string) *mpi.Instance
+}
+
+// configParser parses an NGINX instance's configuration.
+type configParser interface {
+	Parse(ctx context.Context, instance *mpi.Instance) (*model.NginxConfigContext, error)
+}
+
 type CertificateScraper struct {
-	nginxParser  *dconfig.NginxConfigParser
-	nginxService *nginx.NginxService
+	instanceProv instanceProvider
+	parser       configParser
 	cfg          *Config
 	mb           *metadata.MetricsBuilder
 	rb           *metadata.ResourceBuilder
 	logger       *zap.Logger
 	settings     receiver.Settings
+	agentConfig  *config.Config
 }
 
 func newCertificateScraper(
@@ -50,26 +62,40 @@ func newCertificateScraper(
 }
 
 func (c *CertificateScraper) Start(ctx context.Context, _ component.Host) error {
-	agentConfig, err := config.ResolveConfig()
-	if err != nil {
-		return err
+	if c.agentConfig == nil {
+		if c.cfg.AgentConfig != nil {
+			c.agentConfig = c.cfg.AgentConfig
+		} else {
+			agentConfig, err := config.ResolveConfig()
+			if err != nil {
+				return err
+			}
+			c.agentConfig = agentConfig
+		}
 	}
-	nginxParser := dconfig.NewNginxConfigParser(agentConfig)
-	nginxSvc := nginx.NewNginxService(ctx, agentConfig)
-	c.nginxParser = nginxParser
-	c.nginxService = nginxSvc
+
+	if c.parser == nil {
+		c.parser = dconfig.NewNginxConfigParser(c.agentConfig)
+	}
+	if c.instanceProv == nil {
+		c.instanceProv = nginx.NewNginxService(ctx, c.agentConfig)
+	}
 
 	return nil
 }
 
 func (c *CertificateScraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
-	instance := c.nginxService.Instance(c.cfg.InstanceID)
+	if c.instanceProv == nil || c.parser == nil {
+		return pmetric.NewMetrics(), nil
+	}
+
+	instance := c.instanceProv.Instance(c.cfg.InstanceID)
 	if instance == nil {
 		c.logger.Warn("no NGINX instance found", zap.String("instance_id", c.cfg.InstanceID))
 		return pmetric.NewMetrics(), nil
 	}
 
-	nginxConfigContext, err := c.nginxParser.Parse(ctx, instance)
+	nginxConfigContext, err := c.parser.Parse(ctx, instance)
 	if err != nil {
 		return pmetric.NewMetrics(), err
 	}
@@ -80,7 +106,7 @@ func (c *CertificateScraper) Scrape(ctx context.Context) (pmetric.Metrics, error
 	return c.mb.Emit(metadata.WithResource(c.rb.Emit())), nil
 }
 
-func (c *CertificateScraper) Shutdown(ctx context.Context) error {
+func (c *CertificateScraper) Shutdown(_ context.Context) error {
 	return nil
 }
 
@@ -93,8 +119,10 @@ func (c *CertificateScraper) recordMetrics(files []*mpi.File) {
 			c.mb.RecordNginxCertificateTimeToExpirationDataPoint(
 				now,
 				int64(ttl.Seconds()),
-				certMeta.CertificateMeta.GetSubject().GetCommonName(),
 				f.GetFileMeta().GetName(),
+				certMeta.CertificateMeta.GetPublicKeyAlgorithm(),
+				certMeta.CertificateMeta.GetSerialNumber(),
+				certMeta.CertificateMeta.GetSubject().GetCommonName(),
 			)
 		}
 	}
