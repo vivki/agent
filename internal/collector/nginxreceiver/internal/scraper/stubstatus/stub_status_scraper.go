@@ -16,13 +16,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nginxinc/nginx-prometheus-exporter/client"
+	"github.com/nginx/nginx-prometheus-exporter/client"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
+	"github.com/nginx/agent/v3/internal/collector/metricsutil"
 	"github.com/nginx/agent/v3/internal/collector/nginxreceiver/internal/config"
 	"github.com/nginx/agent/v3/internal/collector/nginxreceiver/internal/metadata"
 )
@@ -36,7 +37,7 @@ type NginxStubStatusScraper struct {
 	rb               *metadata.ResourceBuilder
 	settings         receiver.Settings
 	init             sync.Once
-	previousRequests int
+	previousRequests int64
 }
 
 func NewScraper(
@@ -124,7 +125,7 @@ func (s *NginxStubStatusScraper) Scrape(context.Context) (pmetric.Metrics, error
 			return
 		}
 
-		s.previousRequests = int(stats.Requests)
+		s.previousRequests = stats.Requests
 	})
 
 	// Init client in scrape method in case there are transient errors in the constructor.
@@ -146,8 +147,8 @@ func (s *NginxStubStatusScraper) Scrape(context.Context) (pmetric.Metrics, error
 
 	s.mb.RecordNginxHTTPRequestsDataPoint(now, stats.Requests)
 
-	s.mb.RecordNginxHTTPRequestCountDataPoint(now, int64(int(stats.Requests)-s.previousRequests))
-	s.previousRequests = int(stats.Requests)
+	s.mb.RecordNginxHTTPRequestCountDataPoint(now, metricsutil.Increase(stats.Requests, s.previousRequests))
+	s.previousRequests = stats.Requests
 
 	s.mb.RecordNginxHTTPConnectionsDataPoint(
 		now,

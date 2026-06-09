@@ -43,6 +43,8 @@ const (
 	DefaultLogsBatchProcessor    = "default_logs"
 	DefaultExporter              = "default"
 	DefaultPipeline              = "default"
+	DefaultOtlpGrpc              = "otlp_grpc/default"
+	InsertAction                 = "insert"
 
 	// Regular expression to match invalid characters in paths.
 	// It matches whitespace, control characters, non-printable characters, and specific Unicode characters.
@@ -214,11 +216,22 @@ func addDefaultPipelines(collector *Collector) {
 	if collector.Pipelines.Metrics == nil {
 		collector.Pipelines.Metrics = make(map[string]*Pipeline)
 	}
+
+	isContainer, err := host.NewInfo().IsContainer()
+	if err != nil {
+		slog.Debug("No container information found", "error", err)
+	}
+	receivers := []string{"host_metrics", "nginx_metrics"}
+	if isContainer {
+		receivers = append(receivers, "container_metrics")
+	}
+
+	// add check if container and nginx plus or oss
 	if _, ok := collector.Pipelines.Metrics[DefaultPipeline]; !ok {
 		collector.Pipelines.Metrics[DefaultPipeline] = &Pipeline{
-			Receivers:  []string{"host_metrics", "nginx_metrics"},
+			Receivers:  receivers,
 			Processors: []string{"batch/default_metrics"},
-			Exporters:  []string{"otlp/default"},
+			Exporters:  []string{DefaultOtlpGrpc},
 		}
 	}
 
@@ -228,8 +241,8 @@ func addDefaultPipelines(collector *Collector) {
 	if _, ok := collector.Pipelines.Logs[DefaultPipeline]; !ok {
 		collector.Pipelines.Logs[DefaultPipeline] = &Pipeline{
 			Receivers:  []string{"tcplog/nginx_app_protect"},
-			Processors: []string{"logsgzip/default", "batch/default_logs"},
-			Exporters:  []string{"otlp/default"},
+			Processors: []string{"securityviolationsfilter/default", "batch/default_logs"},
+			Exporters:  []string{DefaultOtlpGrpc},
 		}
 	}
 }
@@ -282,7 +295,7 @@ func extractTokenFromAuth(auth *AuthConfig) string {
 func addAuthHeader(collector *Collector, token string) {
 	header := []Header{
 		{
-			Action: "insert",
+			Action: InsertAction,
 			Key:    "authorization",
 			Value:  token,
 		},
@@ -318,18 +331,11 @@ func addDefaultProcessors(collector *Collector) {
 		}
 	}
 
-	if collector.Processors.LogsGzip == nil {
-		collector.Processors.LogsGzip = make(map[string]*LogsGzip)
+	if collector.Processors.SecurityViolationsFilter == nil {
+		collector.Processors.SecurityViolationsFilter = make(map[string]*SecurityViolationsFilter)
 	}
-	if _, ok := collector.Processors.LogsGzip["default"]; !ok {
-		collector.Processors.LogsGzip["default"] = &LogsGzip{}
-	}
-
-	if collector.Processors.SecurityViolations == nil {
-		collector.Processors.SecurityViolations = make(map[string]*SecurityViolations)
-	}
-	if _, ok := collector.Processors.SecurityViolations["default"]; !ok {
-		collector.Processors.SecurityViolations["default"] = &SecurityViolations{}
+	if _, ok := collector.Processors.SecurityViolationsFilter["default"]; !ok {
+		collector.Processors.SecurityViolationsFilter["default"] = &SecurityViolationsFilter{}
 	}
 }
 
@@ -365,7 +371,7 @@ func addDefaultContainerHostMetricsReceiver(collector *Collector) {
 	if collector.Log == nil {
 		collector.Log = &Log{
 			Path:  "stdout",
-			Level: "info",
+			Level: "info", //nolint:goconst // value is local to this function
 		}
 	}
 }
@@ -393,7 +399,7 @@ func AddLabelsAsOTelHeaders(collector *Collector, labels map[string]any) {
 			valueString, ok := value.(string)
 			if ok {
 				collector.Extensions.HeadersSetter.Headers = append(collector.Extensions.HeadersSetter.Headers, Header{
-					Action: "insert",
+					Action: InsertAction,
 					Key:    key,
 					Value:  valueString,
 				})
@@ -692,6 +698,20 @@ func registerClientFlags(fs *flag.FlagSet) {
 		DefClientFileDownloadTimeout,
 		"Timeout value in seconds, for downloading a file during a config apply.",
 	)
+
+	// Deprecated fields
+	markFieldDeprecated(
+		fs,
+		ClientGRPCConnectionResetTimeoutKey,
+		"this field is no longer supported",
+	)
+}
+
+func markFieldDeprecated(fs *flag.FlagSet, field, message string) {
+	err := fs.MarkDeprecated(field, message)
+	if err != nil {
+		slog.Error("Failed to deprecate field", "field", field, "error", err)
+	}
 }
 
 func registerCommandFlags(fs *flag.FlagSet) {
@@ -1005,7 +1025,7 @@ func normalizeFunc(f *flag.FlagSet, name string) flag.NormalizedName {
 
 func resolveLog() *Log {
 	logLevel := strings.ToLower(viperInstance.GetString(LogLevelKey))
-	validLevels := []string{"debug", "info", "warn", "error"}
+	validLevels := []string{"debug", "info", "warn", "error"} //nolint:goconst // value is local to this function
 
 	if !slices.Contains(validLevels, logLevel) {
 		slog.Warn("Invalid log level set, defaulting to 'info'", "log_level", logLevel)
@@ -1181,7 +1201,6 @@ func resolveClient() *Client {
 			FileChunkSize:             viperInstance.GetUint32(ClientGRPCFileChunkSizeKey),
 			ResponseTimeout:           viperInstance.GetDuration(ClientGRPCResponseTimeoutKey),
 			MaxParallelFileOperations: viperInstance.GetInt(ClientGRPCMaxParallelFileOperationsKey),
-			ConnectionResetTimeout:    viperInstance.GetDuration(ClientGRPCConnectionResetTimeoutKey),
 		},
 		Backoff: &BackOff{
 			InitialInterval:     viperInstance.GetDuration(ClientBackoffInitialIntervalKey),
@@ -1240,6 +1259,10 @@ func resolvePipelines() Pipelines {
 		if err != nil {
 			metricsPipelines = nil
 		}
+	}
+
+	if metricsPipelines["default"] != nil && slices.Contains(metricsPipelines["default"].Receivers, "host_metrics") {
+		metricsPipelines["default"].Receivers = append(metricsPipelines["default"].Receivers, "container_metrics")
 	}
 
 	var logsPipelines map[string]*Pipeline

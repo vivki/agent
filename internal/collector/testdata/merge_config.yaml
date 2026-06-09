@@ -1,5 +1,5 @@
 exporters:
-  otlp/default:
+  otlp_grpc/default:
     endpoint: 127.0.0.1:9091
     retry_on_failure:
       enabled: true
@@ -30,7 +30,7 @@ processors:
       key: resource.id
       value: f16dedd7-929f-3642-b823-4ac8d295cc23
 receivers:
-  hostmetrics:
+  host_metrics:
     collection_interval: 1m0s
     initial_delay: 1s
     scrapers:
@@ -52,12 +52,12 @@ service:
   pipelines:
     metrics/default:
       exporters:
-      - otlp/default
+      - otlp_grpc/default
       processors:
       - batch/default_metrics
       - resource/default
       receivers:
-      - hostmetrics
+      - host_metrics
     metrics/prometheus-example-pipeline:
       exporters:
       - prometheus

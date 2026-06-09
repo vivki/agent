@@ -1,7 +1,7 @@
 receivers:
-  containermetrics:
+  container_metrics:
     collection_interval: 1s
-  hostmetrics:
+  host_metrics:
     collection_interval: 1m0s
     initial_delay: 1s
     scrapers:
@@ -53,7 +53,7 @@ receivers:
       location: ""
       ca: ""
     collection_interval: 20s
-  tcplog/default:
+  tcp_log/default:
     listen_address: "localhost:151"
     operators:
       - type: add
@@ -72,9 +72,10 @@ processors:
     send_batch_size: 1000
     timeout: 30s
     send_batch_max_size: 1000
+  securityviolationsfilter/default: {}
 
 exporters:
-  otlp/default:
+  otlp_grpc/default:
     endpoint: "127.0.0.1:1234"
     compression: none
     timeout: 10s
@@ -122,8 +123,8 @@ service:
   pipelines:
     metrics/default:
       receivers:
-        - hostmetrics
-        - containermetrics
+        - host_metrics
+        - container_metrics
         - otlp/default
         - nginx
         - nginxplus/456
@@ -132,15 +133,16 @@ service:
         - resource/default
         - batch/default
       exporters:
-        - otlp/default
+        - otlp_grpc/default
         - prometheus
         - debug
     logs/default:
       receivers:
-        - tcplog/default
+        - tcp_log/default
       processors:
+        - securityviolationsfilter/default
         - resource/default
         - batch/default
       exporters:
-        - otlp/default
+        - otlp_grpc/default
         - debug

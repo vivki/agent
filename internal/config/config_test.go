@@ -71,6 +71,7 @@ func TestResolveConfig(t *testing.T) {
 		headers := actual.Collector.Extensions.HeadersSetter.Headers
 		return headers[i].Key < headers[j].Key
 	})
+
 	assert.Equal(t, createConfig(), actual)
 }
 
@@ -1282,10 +1283,7 @@ func createConfig() *Config {
 						},
 					},
 				},
-				LogsGzip: map[string]*LogsGzip{
-					"default": {},
-				},
-				SecurityViolations: map[string]*SecurityViolations{"default": {}},
+				SecurityViolationsFilter: map[string]*SecurityViolationsFilter{"default": {}},
 			},
 			Receivers: Receivers{
 				OtlpReceivers: map[string]*OtlpReceiver{
@@ -1363,14 +1361,14 @@ func createConfig() *Config {
 					"default": {
 						Receivers:  []string{"host_metrics", "nginx_metrics"},
 						Processors: []string{"batch/default_metrics"},
-						Exporters:  []string{"otlp/default"},
+						Exporters:  []string{"otlp_grpc/default"},
 					},
 				},
 				Logs: map[string]*Pipeline{
 					"default": {
 						Receivers:  []string{"tcplog/nginx_app_protect"},
-						Processors: []string{"logsgzip/default", "batch/default_logs"},
-						Exporters:  []string{"otlp/default"},
+						Processors: []string{"securityviolationsfilter/default", "batch/default_logs"},
+						Exporters:  []string{"otlp_grpc/default"},
 					},
 				},
 			},
@@ -1471,7 +1469,7 @@ func createDefaultCollectorConfig() *Collector {
 					Timeout:          DefCollectorLogsBatchProcessorTimeout,
 				},
 			},
-			LogsGzip: map[string]*LogsGzip{
+			SecurityViolationsFilter: map[string]*SecurityViolationsFilter{
 				"default": {},
 			},
 		},

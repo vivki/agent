@@ -1,13 +1,13 @@
 receivers:
 {{- if ne .Receivers.ContainerMetrics nil }}
-  containermetrics:
+  container_metrics:
     {{- if .Receivers.ContainerMetrics.CollectionInterval }}
     collection_interval: {{ .Receivers.ContainerMetrics.CollectionInterval }}
     {{- end}}
 {{- end }}
 
 {{- if ne .Receivers.HostMetrics nil }}
-  hostmetrics:
+  host_metrics:
     {{- if .Receivers.HostMetrics.CollectionInterval }}
     collection_interval: {{ .Receivers.HostMetrics.CollectionInterval }}
     {{- end}}
@@ -120,7 +120,7 @@ receivers:
 {{- end }}
 
 {{- range $index, $tcplogReceiver := .Receivers.TcplogReceivers }}
-  tcplog/{{$index}}:
+  tcp_log/{{$index}}:
     listen_address: "{{- .ListenAddress -}}"
     operators:
 {{- range $index, $operator := .Operators }}
@@ -166,20 +166,15 @@ processors:
     send_batch_max_size: {{ $batch.SendBatchMaxSize }}
 {{- end }}
 {{- end }}
-{{- if ne .Processors.SecurityViolations nil }}
-{{- range $key, $value := .Processors.SecurityViolations }}
-  securityviolations/{{$key}}: {}
-{{- end }}
-{{- end }}
-{{- if ne .Processors.LogsGzip nil }}
-{{ range $key, $value := .Processors.LogsGzip }}
-  logsgzip/{{$key}}: {}
+{{- if ne .Processors.SecurityViolationsFilter nil }}
+{{- range $key, $value := .Processors.SecurityViolationsFilter }}
+  securityviolationsfilter/{{$key}}: {}
 {{- end }}
 {{- end }}
 
 exporters:
 {{- range $index, $otlpExporter := .Exporters.OtlpExporters }}
-  otlp/{{$index}}:
+  otlp_grpc/{{$index}}:
     endpoint: "{{ .Server.Host -}}:{{- .Server.Port }}"
     {{- if .Compression }}
     compression: {{ .Compression }}
@@ -280,14 +275,7 @@ service:
     metrics/{{$pipelineName}}:
       receivers:
         {{- range $receiver := $pipeline.Receivers }}
-          {{- if eq $receiver "host_metrics" }}
-            {{- if ne $.Receivers.ContainerMetrics nil }}
-        - containermetrics
-            {{- end }}
-            {{- if ne $.Receivers.HostMetrics nil }}
-        - hostmetrics
-            {{- end }}
-          {{- else if eq $receiver "nginx_metrics" }}
+          {{- if eq $receiver "nginx_metrics" }}
             {{- range $.Receivers.NginxReceivers }}
             {{- if gt (len $.Receivers.NginxReceivers) 1 }}
         - nginx/{{- .InstanceID -}}
@@ -322,7 +310,7 @@ service:
       receivers:
         {{- range $receiver := $pipeline.Receivers }}
           {{- if eq $receiver "tcplog/nginx_app_protect" }}
-        - tcplog/nginx_app_protect
+        - tcp_log/nginx_app_protect
           {{- else }}
         - {{ $receiver }}
           {{- end }}

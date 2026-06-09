@@ -31,7 +31,8 @@ const (
 
 	maxParallelFileOperations = 5
 	reloadMonitoringPeriod    = 400 * time.Millisecond
-	connectionResetTimeout    = 200 * time.Millisecond
+
+	localhostIPv4 = "127.0.0.1"
 )
 
 // Produces a populated Agent Config for testing usage.
@@ -59,7 +60,6 @@ func AgentConfig() *config.Config {
 				MaxFileSize:               1,
 				FileChunkSize:             1,
 				MaxParallelFileOperations: maxParallelFileOperations,
-				ConnectionResetTimeout:    connectionResetTimeout,
 			},
 			Backoff: &config.BackOff{
 				InitialInterval:     commonInitialInterval,
@@ -74,9 +74,9 @@ func AgentConfig() *config.Config {
 			ConfigPath: "/etc/nginx-agent/nginx-agent-otelcol.yaml",
 			Exporters: config.Exporters{
 				OtlpExporters: map[string]*config.OtlpExporter{
-					"default": {
+					"default": { //nolint:goconst // extracting a constant here would be overengineering
 						Server: &config.ServerConfig{
-							Host: "127.0.0.1",
+							Host: localhostIPv4,
 							Port: 0,
 						},
 						Compression: "none",
@@ -96,7 +96,7 @@ func AgentConfig() *config.Config {
 				OtlpReceivers: map[string]*config.OtlpReceiver{
 					"default": {
 						Server: &config.ServerConfig{
-							Host: "127.0.0.1",
+							Host: localhostIPv4,
 							Port: 0,
 							Type: config.Grpc,
 						},
@@ -120,14 +120,14 @@ func AgentConfig() *config.Config {
 			Extensions: config.Extensions{
 				Health: &config.Health{
 					Server: &config.ServerConfig{
-						Host: "127.0.0.1",
+						Host: localhostIPv4,
 						Port: 0,
 					},
 				},
 				HeadersSetter: &config.HeadersSetter{
 					Headers: []config.Header{
 						{
-							Action: "insert",
+							Action: "insert", //nolint:goconst // value is local to this function
 							Key:    "authorization",
 							Value:  "fake-authorization",
 						},
@@ -143,14 +143,14 @@ func AgentConfig() *config.Config {
 					"default": {
 						Receivers:  []string{"host_metrics"},
 						Processors: []string{"batch/default"},
-						Exporters:  []string{"otlp/default"},
+						Exporters:  []string{"otlp_grpc/default"},
 					},
 				},
 			},
 		},
 		Command: &config.Command{
 			Server: &config.ServerConfig{
-				Host: "127.0.0.1",
+				Host: localhostIPv4,
 				Port: 0,
 				Type: config.Grpc,
 			},
